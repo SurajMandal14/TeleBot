@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
             const chatId = message.chat.id;
             const text = message.text;
             
-            await bot.sendMessage(chatId, 'Parsing your invoice details, please wait...');
+            const parsingMessage = await bot.sendMessage(chatId, 'Parsing your invoice details, please wait...');
 
             // Use the existing server action to parse the details
             const result = await parseInvoiceAction({ text });
@@ -51,42 +51,65 @@ export async function POST(req: NextRequest) {
             if (result.success && result.data) {
                 const { customerName, vehicleNumber, carModel, items } = result.data;
                 
-                let responseText = `*Invoice Details Parsed Successfully*:\n\n`;
-                responseText += `*Customer:* ${customerName}\n`;
-                responseText += `*Vehicle:* ${vehicleNumber}\n`;
-                responseText += `*Model:* ${carModel}\n\n`;
-                responseText += `*Items*:\n`;
+                const missingFields = [];
+                if (!customerName?.trim()) missingFields.push('Customer Name');
+                if (!vehicleNumber?.trim()) missingFields.push('Vehicle Number');
+                if (!carModel?.trim()) missingFields.push('Car Model');
 
-                let totalAmount = 0;
-                items.forEach(item => {
-                    responseText += `- ${item.description}: ${item.total}\n`;
-                    totalAmount += item.total;
-                });
+                if (missingFields.length > 0) {
+                    const missingFieldsText = missingFields.map(f => `*${f}*`).join(', ');
+                    const responseText = `I've parsed what I could, but I'm missing some essential details: ${missingFieldsText}.\n\nPlease send your service notes again, including the missing information.`;
+                    
+                    await bot.editMessageText(responseText, {
+                        chat_id: chatId,
+                        message_id: parsingMessage.message_id,
+                        parse_mode: 'Markdown'
+                    });
 
-                responseText += `\n*Grand Total:* ${totalAmount.toFixed(2)}`;
-                
-                const replyOptions: TelegramBot.SendMessageOptions = {
-                    parse_mode: 'Markdown'
-                };
-
-                if (publicUrl) {
-                    const jsonData = JSON.stringify(result.data);
-                    const base64Data = Buffer.from(jsonData).toString('base64');
-                    const invoiceUrl = `${publicUrl}/view-invoice?data=${base64Data}`;
-
-                    replyOptions.reply_markup = {
-                        inline_keyboard: [
-                            [{ text: '📄 View and Print PDF', url: invoiceUrl }]
-                        ]
-                    };
                 } else {
-                     responseText += `\n\n(Set the PUBLIC_URL environment variable to enable PDF link generation)`;
+                    let responseText = `*Invoice Details Parsed Successfully*:\n\n`;
+                    responseText += `*Customer:* ${customerName}\n`;
+                    responseText += `*Vehicle:* ${vehicleNumber}\n`;
+                    responseText += `*Model:* ${carModel}\n\n`;
+                    responseText += `*Items*:\n`;
+
+                    let totalAmount = 0;
+                    items.forEach(item => {
+                        responseText += `- ${item.description}: ${item.total}\n`;
+                        totalAmount += item.total;
+                    });
+
+                    responseText += `\n*Grand Total:* ${totalAmount.toFixed(2)}`;
+                    
+                    const replyOptions: TelegramBot.SendMessageOptions = {
+                        parse_mode: 'Markdown'
+                    };
+
+                    if (publicUrl) {
+                        const jsonData = JSON.stringify(result.data);
+                        const base64Data = Buffer.from(jsonData).toString('base64');
+                        const invoiceUrl = `${publicUrl}/view-invoice?data=${base64Data}`;
+
+                        replyOptions.reply_markup = {
+                            inline_keyboard: [
+                                [{ text: '📄 View and Print PDF', url: invoiceUrl }]
+                            ]
+                        };
+                    } else {
+                         responseText += `\n\n(Set the PUBLIC_URL environment variable to enable PDF link generation)`;
+                    }
+
+                    await bot.editMessageText(responseText, {
+                        chat_id: chatId,
+                        message_id: parsingMessage.message_id,
+                        ...replyOptions
+                    });
                 }
-
-                await bot.sendMessage(chatId, responseText, replyOptions);
-
             } else {
-                await bot.sendMessage(chatId, `Sorry, I couldn't parse that. Error: ${result.error}`);
+                await bot.editMessageText(`Sorry, I couldn't parse that. Error: ${result.error}`, {
+                    chat_id: chatId,
+                    message_id: parsingMessage.message_id,
+                });
             }
         }
 
