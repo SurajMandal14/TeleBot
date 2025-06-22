@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const lineItemSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
-  quantity: z.coerce.number().min(0.01, 'Quantity must be positive.'),
-  unitPrice: z.coerce.number().min(0, 'Unit price cannot be negative.'),
+  quantity: z.coerce.number().optional(),
+  unitPrice: z.coerce.number().optional(),
   total: z.coerce.number().min(0),
 });
 

@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { invoiceSchema, type InvoiceSchema } from '@/lib/validators';
 import { useToast } from '@/hooks/use-toast';
 import { modifyInvoiceAction, parseInvoiceAction } from '@/app/actions';
+import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,9 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { InvoicePreview } from './invoice-preview';
-import { Loader2, Plus, Trash2, Wand2, Download, FileText, Bot } from 'lucide-react';
+import { Loader2, Plus, Trash2, Wand2, FileText, Bot } from 'lucide-react';
 
 const initialInvoiceState: InvoiceSchema = {
   customerName: '',
@@ -37,6 +37,7 @@ export function InvoiceCreator() {
   const form = useForm<InvoiceSchema>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: initialInvoiceState,
+    mode: 'onChange'
   });
 
   const { fields, append, remove, update } = useFieldArray({
@@ -51,9 +52,12 @@ export function InvoiceCreator() {
       watchedItems.forEach((item, index) => {
           const quantity = Number(item.quantity) || 0;
           const unitPrice = Number(item.unitPrice) || 0;
-          const newTotal = quantity * unitPrice;
-          if (item.total !== newTotal) {
-              update(index, { ...item, total: newTotal });
+
+          if (quantity > 0 && unitPrice > 0) {
+            const newTotal = quantity * unitPrice;
+            if (Math.abs((item.total || 0) - newTotal) > 0.01) {
+                update(index, { ...item, total: newTotal });
+            }
           }
       });
   }, [watchedItems, update]);
@@ -111,7 +115,7 @@ export function InvoiceCreator() {
       <div className="space-y-8">
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline flex items-center gap-2"><Wand2 className="text-accent" /> AI-Powered Parsing</CardTitle>
+            <CardTitle className="font-headline flex items-center gap-2"><Wand2 className="text-primary" /> AI-Powered Parsing</CardTitle>
             <CardDescription>Paste your service notes below in any language (English or Telugu). Our AI will do the rest.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -170,37 +174,46 @@ export function InvoiceCreator() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="w-[45%]">Description</TableHead>
-                              <TableHead>Qty</TableHead>
+                              <TableHead className="w-[40px]">Sl.</TableHead>
+                              <TableHead className="w-[40%]">Description</TableHead>
                               <TableHead>Unit Price</TableHead>
+                              <TableHead>Qty</TableHead>
                               <TableHead>Total</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {fields.map((item, index) => (
-                              <TableRow key={item.id}>
-                                <TableCell>
-                                  <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => <Input {...field} className="h-8" />} />
-                                </TableCell>
-                                <TableCell>
-                                  <FormField control={form.control} name={`items.${index}.quantity`} render={({ field }) => <Input type="number" {...field} className="h-8 w-16" />} />
-                                </TableCell>
-                                <TableCell>
-                                   <FormField control={form.control} name={`items.${index}.unitPrice`} render={({ field }) => <Input type="number" {...field} className="h-8 w-24" />} />
-                                </TableCell>
-                                <TableCell>
-                                   <FormField control={form.control} name={`items.${index}.total`} render={({ field }) => <Input {...field} readOnly className="h-8 w-24 bg-muted border-none" />} />
-                                </TableCell>
-                                <TableCell>
-                                  <Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                            {fields.map((item, index) => {
+                               const watchedItem = watchedItems[index];
+                               const quantity = Number(watchedItem?.quantity) || 0;
+                               const unitPrice = Number(watchedItem?.unitPrice) || 0;
+                               const isCalculated = quantity > 0 && unitPrice > 0;
+
+                               return (
+                                <TableRow key={item.id}>
+                                    <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
+                                    <TableCell>
+                                    <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => <Input {...field} className="h-8" />} />
+                                    </TableCell>
+                                    <TableCell>
+                                    <FormField control={form.control} name={`items.${index}.unitPrice`} render={({ field }) => <Input type="number" {...field} className="h-8 w-24" onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />} />
+                                    </TableCell>
+                                    <TableCell>
+                                    <FormField control={form.control} name={`items.${index}.quantity`} render={({ field }) => <Input type="number" {...field} className="h-8 w-16" onChange={e => field.onChange(parseInt(e.target.value) || 0)} />} />
+                                    </TableCell>
+                                    <TableCell>
+                                    <FormField control={form.control} name={`items.${index}.total`} render={({ field }) => <Input type="number" {...field} readOnly={isCalculated} className={cn("h-8 w-24", isCalculated && "bg-muted border-none")} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />} />
+                                    </TableCell>
+                                    <TableCell>
+                                    <Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                    </TableCell>
+                                </TableRow>
+                               );
+                            })}
                           </TableBody>
                         </Table>
                     </div>
-                     <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ description: '', quantity: 1, unitPrice: 0, total: 0 })}>
+                     <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ description: '', total: 0 })}>
                         <Plus className="mr-2 h-4 w-4" /> Add Item
                       </Button>
                   </div>
@@ -213,7 +226,7 @@ export function InvoiceCreator() {
         {isInvoiceReady && (
           <Card>
             <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2"><Bot className="text-accent" /> AI Quick Edit</CardTitle>
+              <CardTitle className="font-headline flex items-center gap-2"><Bot className="text-primary" /> AI Quick Edit</CardTitle>
               <CardDescription>Use natural language to modify items. e.g., "add 2 wiper blades for 500 each" or "remove engine oil".</CardDescription>
             </CardHeader>
             <CardContent>
@@ -235,27 +248,15 @@ export function InvoiceCreator() {
 
       <div className="lg:sticky top-8">
         <Card className="shadow-lg">
-          <CardHeader className="flex-row items-center justify-between">
+          <CardHeader className="flex-row items-center justify-between no-print">
             <div>
               <CardTitle className="font-headline">Invoice Preview</CardTitle>
               <CardDescription>This is how your invoice will look.</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button onClick={handlePrint} disabled={!isInvoiceReady} variant="outline" size="sm">
-                <FileText className="mr-2 h-4 w-4" /> PDF
+                <FileText className="mr-2 h-4 w-4" /> Print PDF
               </Button>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button disabled size="sm">
-                      <Download className="mr-2 h-4 w-4" /> DOCX
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>DOCX generation is coming soon!</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
           </CardHeader>
           <CardContent>
