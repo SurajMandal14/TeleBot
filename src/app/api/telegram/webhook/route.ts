@@ -14,9 +14,14 @@ import { parseInvoiceAction } from '@/app/actions';
 // curl -F "url=https://your-app-name.web.app/api/telegram/webhook" https://api.telegram.org/bot123456:ABC-DEF123456/setWebhook
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
+const publicUrl = process.env.PUBLIC_URL;
 
 if (!token) {
     console.warn("TELEGRAM_BOT_TOKEN is not set. The Telegram bot will not work.");
+}
+
+if (!publicUrl) {
+    console.warn("PUBLIC_URL is not set. PDF link generation from the bot will not work.");
 }
 
 const bot = token ? new TelegramBot(token) : null;
@@ -59,8 +64,26 @@ export async function POST(req: NextRequest) {
                 });
 
                 responseText += `\n*Grand Total:* ${totalAmount.toFixed(2)}`;
+                
+                const replyOptions: TelegramBot.SendMessageOptions = {
+                    parse_mode: 'Markdown'
+                };
 
-                await bot.sendMessage(chatId, responseText, { parse_mode: 'Markdown' });
+                if (publicUrl) {
+                    const jsonData = JSON.stringify(result.data);
+                    const base64Data = Buffer.from(jsonData).toString('base64');
+                    const invoiceUrl = `${publicUrl}/view-invoice?data=${base64Data}`;
+
+                    replyOptions.reply_markup = {
+                        inline_keyboard: [
+                            [{ text: '📄 View and Print PDF', url: invoiceUrl }]
+                        ]
+                    };
+                } else {
+                     responseText += `\n\n(Set the PUBLIC_URL environment variable to enable PDF link generation)`;
+                }
+
+                await bot.sendMessage(chatId, responseText, replyOptions);
 
             } else {
                 await bot.sendMessage(chatId, `Sorry, I couldn't parse that. Error: ${result.error}`);
