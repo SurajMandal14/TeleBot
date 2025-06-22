@@ -4,11 +4,22 @@ import { handleInvoiceModifications, HandleInvoiceModificationsInput } from '@/a
 import { parseServiceDetails, ParseServiceDetailsInput, ParseServiceDetailsOutput } from '@/ai/flows/parse-service-details';
 import { invoiceSchema } from '@/lib/validators';
 
+const API_KEY_ERROR_MESSAGE = "AI features require a Gemini API key. Please add `GEMINI_API_KEY=your_key` to the .env file and restart the server. You can get a key from Google AI Studio.";
+
+function isApiKeyMissing() {
+    return !process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY;
+}
+
 export async function parseInvoiceAction(input: ParseServiceDetailsInput): Promise<{
     success: boolean;
     data: ParseServiceDetailsOutput | null;
     error: string | null;
 }> {
+    if (isApiKeyMissing()) {
+        console.error(API_KEY_ERROR_MESSAGE);
+        return { success: false, data: null, error: API_KEY_ERROR_MESSAGE };
+    }
+
     try {
         const parsedData = await parseServiceDetails(input);
         
@@ -36,6 +47,11 @@ export async function parseInvoiceAction(input: ParseServiceDetailsInput): Promi
 }
 
 export async function modifyInvoiceAction(input: HandleInvoiceModificationsInput) {
+    if (isApiKeyMissing()) {
+        console.error(API_KEY_ERROR_MESSAGE);
+        return { success: false, data: null, message: API_KEY_ERROR_MESSAGE };
+    }
+    
     try {
         const result = await handleInvoiceModifications(input);
         if (result.success && result.modifiedInvoiceDetails) {
