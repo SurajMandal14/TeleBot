@@ -92,7 +92,7 @@ export function InvoiceCreator() {
 
     startModifying(async () => {
       const currentInvoiceString = JSON.stringify(invoiceData);
-      const result = await modifyInvoiceAction({ command: 'update', invoiceDetails: currentInvoiceString, lineItemDetails: aiCommand });
+      const result = await modifyInvoiceAction({ invoiceDetails: currentInvoiceString, modificationRequest: aiCommand });
       if (result.success && result.data) {
         const parsedResult = result.data;
         form.reset(parsedResult);

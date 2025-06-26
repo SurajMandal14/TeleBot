@@ -1,7 +1,7 @@
 // src/app/api/telegram/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import TelegramBot from 'node-telegram-bot-api';
-import { parseInvoiceAction } from '@/app/actions';
+import { modifyInvoiceAction, parseInvoiceAction } from '@/app/actions';
 
 // It's recommended to set the webhook via a manual cURL command or a setup script
 // rather than in the code, especially in a serverless environment.
@@ -26,6 +26,47 @@ if (!publicUrl) {
 
 const bot = token ? new TelegramBot(token) : null;
 
+async function generateInvoiceReply(invoiceData: any, title: string) {
+    const { customerName, vehicleNumber, carModel, items, invoiceNumber } = invoiceData;
+
+    let responseText = `*${title}*:\n\n`;
+    responseText += `*Invoice Number:* ${invoiceNumber}\n\n`;
+    responseText += `*Customer:* ${customerName}\n`;
+    responseText += `*Vehicle:* ${vehicleNumber}\n`;
+    responseText += `*Model:* ${carModel}\n\n`;
+    responseText += `*Items*:\n`;
+
+    let totalAmount = 0;
+    items.forEach((item: any) => {
+        responseText += `- ${item.description}: ${item.total}\n`;
+        totalAmount += item.total;
+    });
+
+    responseText += `\n*Grand Total:* ${totalAmount.toFixed(2)}`;
+    
+    const replyOptions: TelegramBot.SendMessageOptions = {
+        parse_mode: 'Markdown'
+    };
+
+    if (publicUrl) {
+        const jsonData = JSON.stringify(invoiceData);
+        const base64Data = Buffer.from(jsonData).toString('base64');
+        const invoiceUrl = `${publicUrl}/view-invoice?data=${base64Data}`;
+
+        replyOptions.reply_markup = {
+            inline_keyboard: [
+                [{ text: '📄 View and Print PDF', url: invoiceUrl }]
+            ]
+        };
+    } else {
+        responseText += `\n\n(Set the PUBLIC_URL environment variable to enable PDF link generation)`;
+    }
+
+    responseText += `\n\n(To make changes, simply reply to this message with your request, e.g., "remove engine oil")`;
+
+    return { responseText, replyOptions };
+}
+
 export async function POST(req: NextRequest) {
     if (!bot) {
         return NextResponse.json({ error: 'Telegram bot not configured.' }, { status: 500 });
@@ -39,11 +80,45 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const message = body.message;
 
-        if (message && message.text) {
+        if (!message) {
+            return NextResponse.json({ status: 'ok' });
+        }
+
+        // Handle modification requests (replies to the bot's own invoice messages)
+        if (message.reply_to_message && message.reply_to_message.from.is_bot) {
+            const chatId = message.chat.id;
+            const originalInvoiceText = message.reply_to_message.text;
+            const modificationRequest = message.text;
+
+            const processingMessage = await bot.sendMessage(chatId, 'Applying your changes, please wait...');
+
+            const result = await modifyInvoiceAction({
+                invoiceDetails: originalInvoiceText,
+                modificationRequest: modificationRequest,
+            });
+
+            if (result.success && result.data) {
+                const { responseText, replyOptions } = await generateInvoiceReply(result.data, "Invoice Details Updated");
+                await bot.editMessageText(responseText, {
+                    chat_id: chatId,
+                    message_id: processingMessage.message_id,
+                    ...replyOptions
+                });
+            } else {
+                await bot.editMessageText(`Sorry, I couldn't apply that change. Error: ${result.message}`, {
+                    chat_id: chatId,
+                    message_id: processingMessage.message_id,
+                });
+            }
+            return NextResponse.json({ status: 'ok' });
+        }
+
+
+        // Handle regular messages and commands
+        if (message.text) {
             const chatId = message.chat.id;
             const text = message.text;
 
-            // Handle commands
             if (text === '/start') {
                 await bot.sendMessage(chatId, 'Welcome to Flywheels bot, select your action', {
                     reply_markup: {
@@ -66,13 +141,12 @@ export async function POST(req: NextRequest) {
             }
 
             
-            // If it's not a known command or button, treat it as invoice text
             const parsingMessage = await bot.sendMessage(chatId, 'Parsing your invoice details, please wait...');
 
             const result = await parseInvoiceAction({ text });
 
             if (result.success && result.data) {
-                const { customerName, vehicleNumber, carModel, items, invoiceNumber } = result.data;
+                const { customerName, vehicleNumber, carModel } = result.data;
                 
                 const missingFields = [];
                 if (!customerName?.trim()) missingFields.push('Customer Name');
@@ -90,39 +164,7 @@ export async function POST(req: NextRequest) {
                     });
 
                 } else {
-                    let responseText = `*Invoice Details Parsed Successfully*:\n\n`;
-                    responseText += `*Invoice Number:* ${invoiceNumber}\n\n`;
-                    responseText += `*Customer:* ${customerName}\n`;
-                    responseText += `*Vehicle:* ${vehicleNumber}\n`;
-                    responseText += `*Model:* ${carModel}\n\n`;
-                    responseText += `*Items*:\n`;
-
-                    let totalAmount = 0;
-                    items.forEach(item => {
-                        responseText += `- ${item.description}: ${item.total}\n`;
-                        totalAmount += item.total;
-                    });
-
-                    responseText += `\n*Grand Total:* ${totalAmount.toFixed(2)}`;
-                    
-                    const replyOptions: TelegramBot.SendMessageOptions = {
-                        parse_mode: 'Markdown'
-                    };
-
-                    if (publicUrl) {
-                        const jsonData = JSON.stringify(result.data);
-                        const base64Data = Buffer.from(jsonData).toString('base64');
-                        const invoiceUrl = `${publicUrl}/view-invoice?data=${base64Data}`;
-
-                        replyOptions.reply_markup = {
-                            inline_keyboard: [
-                                [{ text: '📄 View and Print PDF', url: invoiceUrl }]
-                            ]
-                        };
-                    } else {
-                         responseText += `\n\n(Set the PUBLIC_URL environment variable to enable PDF link generation)`;
-                    }
-
+                    const { responseText, replyOptions } = await generateInvoiceReply(result.data, "Invoice Details Parsed Successfully");
                     await bot.editMessageText(responseText, {
                         chat_id: chatId,
                         message_id: parsingMessage.message_id,
