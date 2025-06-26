@@ -8,6 +8,7 @@ export const lineItemSchema = z.object({
 });
 
 export const invoiceSchema = z.object({
+  invoiceNumber: z.string(),
   vehicleNumber: z.string().min(1, 'Vehicle number is required.'),
   customerName: z.string().min(1, 'Customer name is required.'),
   carModel: z.string().min(1, 'Car model is required.'),

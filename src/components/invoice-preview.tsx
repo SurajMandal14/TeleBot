@@ -51,7 +51,7 @@ export function InvoicePreview({ invoiceData }: InvoicePreviewProps) {
         <div className="flex justify-between items-start pb-4 border-b-2 border-red-500">
             <div className="flex items-start">
                 <div className="text-gray-700 -rotate-90 origin-bottom-left absolute bottom-[150px] left-[30px] tracking-[.2em] text-2xl font-extralight" style={{writingMode: 'vertical-rl'}}>
-                    Invoice [{invoiceData.vehicleNumber?.slice(-6) || '000000'}]
+                    Invoice [{invoiceData.invoiceNumber || '000000'}]
                 </div>
                 <div className="pl-12">
                     <h1 className="text-2xl font-bold text-red-600">FLYWHEELS <span className="font-light">THE AUTO EXPERTS</span></h1>
@@ -71,12 +71,12 @@ export function InvoicePreview({ invoiceData }: InvoicePreviewProps) {
                 <p>{currentDate}</p>
             </div>
             <div>
-                <p className="font-bold text-gray-500">To</p>
-                <p>{invoiceData.customerName || 'N/A'}</p>
+                <p className="font-bold text-gray-500">Invoice Number</p>
+                <p>{invoiceData.invoiceNumber || 'N/A'}</p>
             </div>
             <div>
-                <p className="font-bold text-gray-500">Ship To</p>
-                <p>In-Store</p>
+                <p className="font-bold text-gray-500">To</p>
+                <p>{invoiceData.customerName || 'N/A'}</p>
             </div>
         </div>
         
@@ -121,14 +121,19 @@ export function InvoicePreview({ invoiceData }: InvoicePreviewProps) {
             <p className="text-red-500">Thanks for choosing us to serve your automotive needs!</p>
         </div>
 
-        <footer className="text-xs text-red-500 border-t-2 border-red-500 pt-2 flex justify-between">
-            <div>
-                <p>Tel: + 91-9966783333</p>
-                <p>+ 91-9563998998</p>
+        <footer className="text-xs text-red-500 border-t-2 border-red-500 pt-2">
+            <div className="flex justify-between">
+                <div>
+                    <p>Tel: + 91-9966783333</p>
+                    <p>+ 91-9563998998</p>
+                </div>
+                 <div className="text-right">
+                    <p>Email: flywheelsauto.vjy@gmail.com</p>
+                    <p>Web: www.flywheelsauto.in</p>
+                </div>
             </div>
-             <div className="text-right">
-                <p>Email: flywheelsauto.vjy@gmail.com</p>
-                <p>Web: www.flywheelsauto.in</p>
+             <div className="text-right font-code text-xs text-gray-500 mt-2">
+                a 2LYP create
             </div>
         </footer>
     </div>

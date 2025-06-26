@@ -3,6 +3,7 @@
 import { handleInvoiceModifications, HandleInvoiceModificationsInput } from '@/ai/flows/handle-invoice-modifications';
 import { parseServiceDetails, ParseServiceDetailsInput, ParseServiceDetailsOutput } from '@/ai/flows/parse-service-details';
 import { invoiceSchema } from '@/lib/validators';
+import { format } from 'date-fns';
 
 const API_KEY_ERROR_MESSAGE = "AI features require a Gemini API key. Please add `GEMINI_API_KEY=your_key` to the .env file and restart the server. You can get a key from Google AI Studio.";
 
@@ -14,7 +15,7 @@ function isApiKeyMissing() {
 
 export async function parseInvoiceAction(input: ParseServiceDetailsInput): Promise<{
     success: boolean;
-    data: ParseServiceDetailsOutput | null;
+    data: (ParseServiceDetailsOutput & { invoiceNumber: string }) | null;
     error: string | null;
 }> {
     if (isApiKeyMissing()) {
@@ -32,16 +33,17 @@ export async function parseInvoiceAction(input: ParseServiceDetailsInput): Promi
             unitPrice: Number(item.unitPrice) || 0,
             total: Number(item.total) || 0,
         }));
-
-        const validatedData = { ...parsedData, items: validatedItems };
+        
+        const invoiceNumber = format(new Date(), 'yyMMddHHmmss');
+        const dataWithInvoiceNumber = { ...parsedData, items: validatedItems, invoiceNumber };
 
         // Validate the structure of the AI output
-        const a = invoiceSchema.safeParse(validatedData);
+        const a = invoiceSchema.safeParse(dataWithInvoiceNumber);
         if(!a.success) {
             console.warn("AI output validation failed", a.error.issues);
         }
 
-        return { success: true, data: validatedData, error: null };
+        return { success: true, data: dataWithInvoiceNumber, error: null };
     } catch (error: any) {
         console.error('Error parsing service details:', error);
         if (error.message?.includes('API key')) {

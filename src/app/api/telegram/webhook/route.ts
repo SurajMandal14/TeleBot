@@ -42,14 +42,37 @@ export async function POST(req: NextRequest) {
         if (message && message.text) {
             const chatId = message.chat.id;
             const text = message.text;
+
+            // Handle commands
+            if (text === '/start') {
+                await bot.sendMessage(chatId, 'Welcome to Flywheels bot, select your action', {
+                    reply_markup: {
+                        keyboard: [[{ text: 'Invoice' }, { text: 'Quotation' }]],
+                        resize_keyboard: true,
+                        one_time_keyboard: true,
+                    }
+                });
+                return NextResponse.json({ status: 'ok' });
+            }
             
+            if (text === 'Invoice') {
+                await bot.sendMessage(chatId, 'Please send the service notes.');
+                return NextResponse.json({ status: 'ok' });
+            }
+
+            if (text === 'Quotation') {
+                await bot.sendMessage(chatId, 'This feature is coming soon.');
+                return NextResponse.json({ status: 'ok' });
+            }
+
+            
+            // If it's not a known command or button, treat it as invoice text
             const parsingMessage = await bot.sendMessage(chatId, 'Parsing your invoice details, please wait...');
 
-            // Use the existing server action to parse the details
             const result = await parseInvoiceAction({ text });
 
             if (result.success && result.data) {
-                const { customerName, vehicleNumber, carModel, items } = result.data;
+                const { customerName, vehicleNumber, carModel, items, invoiceNumber } = result.data;
                 
                 const missingFields = [];
                 if (!customerName?.trim()) missingFields.push('Customer Name');
@@ -68,6 +91,7 @@ export async function POST(req: NextRequest) {
 
                 } else {
                     let responseText = `*Invoice Details Parsed Successfully*:\n\n`;
+                    responseText += `*Invoice Number:* ${invoiceNumber}\n\n`;
                     responseText += `*Customer:* ${customerName}\n`;
                     responseText += `*Vehicle:* ${vehicleNumber}\n`;
                     responseText += `*Model:* ${carModel}\n\n`;
