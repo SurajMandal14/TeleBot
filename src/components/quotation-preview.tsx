@@ -48,7 +48,7 @@ export function QuotationPreview({ quotationData }: QuotationPreviewProps) {
     <div id="quotation-print-area" className="bg-white text-black p-8 font-sans text-[10px] w-full h-full overflow-auto flex flex-col relative">
         <header className="flex justify-between items-start pb-4">
             <div className="flex items-start">
-                 <div className="text-gray-400 -rotate-90 origin-bottom-left absolute bottom-[40%] left-[30px] tracking-[.3em] text-4xl font-light" style={{writingMode: 'vertical-rl'}}>
+                 <div className="text-gray-400 -rotate-180 origin-center absolute top-[35%] left-[25px] tracking-[.3em] text-4xl font-light" style={{writingMode: 'vertical-rl'}}>
                     QUOTATION
                 </div>
                 <div className="pl-16">
@@ -67,7 +67,11 @@ export function QuotationPreview({ quotationData }: QuotationPreviewProps) {
             </div>
         </header>
 
-        <div className="grid grid-cols-2 gap-4 pt-4 mt-4 border-t-2 border-red-500">
+        <div className="grid grid-cols-3 gap-4 pt-4 mt-4 border-t-2 border-red-500">
+             <div>
+                <p className="font-bold text-gray-500">Quotation No.</p>
+                <p>{quotationData.quotationNumber || 'N/A'}</p>
+            </div>
             <div>
                 <p className="font-bold text-gray-500">Date</p>
                 <p>{currentDate}</p>
