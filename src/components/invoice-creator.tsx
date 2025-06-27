@@ -19,6 +19,7 @@ import { InvoicePreview } from './invoice-preview';
 import { Loader2, Plus, Trash2, Wand2, FileText, Bot } from 'lucide-react';
 
 const initialInvoiceState: InvoiceSchema = {
+  invoiceNumber: '',
   customerName: '',
   vehicleNumber: '',
   carModel: '',
@@ -92,9 +93,9 @@ export function InvoiceCreator() {
 
     startModifying(async () => {
       const currentInvoiceString = JSON.stringify(invoiceData);
-      const result = await modifyInvoiceAction({ invoiceDetails: currentInvoiceString, modificationRequest: aiCommand });
+      const result = await modifyInvoiceAction({ documentDetails: currentInvoiceString, modificationRequest: aiCommand });
       if (result.success && result.data) {
-        const parsedResult = result.data;
+        const parsedResult = result.data as InvoiceSchema;
         form.reset(parsedResult);
         toast({ title: 'Modification Successful', description: result.message });
         setAiCommand('');

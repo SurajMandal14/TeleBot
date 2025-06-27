@@ -126,26 +126,48 @@ export async function POST(req: NextRequest) {
         }
 
         const chatId = message.chat.id;
+        const isReplyToBot = message.reply_to_message && message.reply_to_message.from.is_bot;
+        const replyText = message.reply_to_message?.text || '';
         
-        // Handle modification requests (replies to the bot's own invoice messages)
-        if (message.reply_to_message && message.reply_to_message.from.is_bot && message.reply_to_message.text.includes('*Invoice Number:*')) {
-            const originalInvoiceText = message.reply_to_message.text;
+        // Handle modification requests (replies to the bot's own invoice/quotation messages)
+        if (isReplyToBot && (replyText.includes('Invoice Number:') || replyText.includes('Quotation Number:'))) {
+            const originalDocumentText = replyText;
             const modificationRequest = message.text;
 
             const processingMessage = await bot.sendMessage(chatId, 'Applying your changes, please wait...');
 
             const result = await modifyInvoiceAction({
-                invoiceDetails: originalInvoiceText,
+                documentDetails: originalDocumentText,
                 modificationRequest: modificationRequest,
             });
 
             if (result.success && result.data) {
-                const { responseText, replyOptions } = await generateInvoiceReply(result.data, "Invoice Details Updated");
-                await bot.editMessageText(responseText, {
-                    chat_id: chatId,
-                    message_id: processingMessage.message_id,
-                    ...replyOptions
-                });
+                let replyGenerator;
+                let title;
+                // Type assertion to help TypeScript
+                const modifiedData = result.data as any;
+
+                if (modifiedData.invoiceNumber) {
+                    replyGenerator = generateInvoiceReply;
+                    title = "Invoice Details Updated";
+                } else if (modifiedData.quotationNumber) {
+                    replyGenerator = generateQuotationReply;
+                    title = "Quotation Details Updated";
+                }
+
+                if (replyGenerator && title) {
+                    const { responseText, replyOptions } = await replyGenerator(modifiedData, title);
+                    await bot.editMessageText(responseText, {
+                        chat_id: chatId,
+                        message_id: processingMessage.message_id,
+                        ...replyOptions
+                    });
+                } else {
+                     await bot.editMessageText(`Sorry, I couldn't process the document type after modification.`, {
+                        chat_id: chatId,
+                        message_id: processingMessage.message_id,
+                    });
+                }
             } else {
                 await bot.editMessageText(`Sorry, I couldn't apply that change. Error: ${result.message}`, {
                     chat_id: chatId,
