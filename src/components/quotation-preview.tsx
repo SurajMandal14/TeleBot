@@ -45,32 +45,32 @@ export function QuotationPreview({ quotationData }: QuotationPreviewProps) {
   }
 
   return (
-    <div id="quotation-print-area" className="bg-white text-black p-6 font-sans text-[10px] w-full h-full overflow-auto flex flex-col">
-        <div className="flex justify-between items-start pb-4 border-b-2 border-blue-500">
+    <div id="quotation-print-area" className="bg-white text-black p-8 font-sans text-[10px] w-full h-full overflow-auto flex flex-col relative">
+        <header className="flex justify-between items-start pb-4">
             <div className="flex items-start">
-                <div className="text-gray-700 -rotate-90 origin-bottom-left absolute bottom-[150px] left-[30px] tracking-[.2em] text-2xl font-extralight" style={{writingMode: 'vertical-rl'}}>
-                    Quotation [{quotationData.quotationNumber || '000000'}]
+                 <div className="text-gray-400 -rotate-90 origin-bottom-left absolute bottom-[40%] left-[30px] tracking-[.3em] text-4xl font-light" style={{writingMode: 'vertical-rl'}}>
+                    QUOTATION
                 </div>
-                <div className="pl-12">
-                    <h1 className="text-2xl font-bold text-blue-600">FLYWHEELS <span className="font-light">THE AUTO EXPERTS</span></h1>
-                    <p className="text-gray-600">Ayush hospital road, beside Saibaba temple</p>
+                <div className="pl-16">
+                    <h1 className="text-2xl font-bold text-red-600 flex items-center">
+                        <span className="w-8 h-px bg-red-600 mr-2"></span>
+                        FLYWHEELS <span className="font-light ml-2">THE AUTO EXPERTS</span>
+                    </h1>
+                    <p className="text-gray-600 mt-2">Ayush hospital road, beside Saibaba temple</p>
                     <p className="text-gray-600">Nagarjuna Nagar, Currency Nagar</p>
                     <p className="text-gray-600">Vijayawada, Andhra Pradesh -520008</p>
+                    <p className="text-gray-600 font-medium mt-2">GST IN : 37AAJFF3362M1Z1</p>
                 </div>
             </div>
-            <div className="w-40 h-20 relative">
-                 <Image src="https://i.ibb.co/L05t0YJ/flywheels-logo.png" alt="Flywheels Logo" layout="fill" objectFit="contain" />
+            <div className="w-40 h-24 relative -mt-2">
+                 <Image src="https://i.ibb.co/fY6wrYpn/flywheels-logo.jpg" alt="Flywheels Logo" layout="fill" objectFit="contain" />
             </div>
-        </div>
+        </header>
 
-        <div className="grid grid-cols-3 gap-4 py-4 text-xs border-b border-gray-300">
+        <div className="grid grid-cols-2 gap-4 pt-4 mt-4 border-t-2 border-red-500">
             <div>
                 <p className="font-bold text-gray-500">Date</p>
                 <p>{currentDate}</p>
-            </div>
-            <div>
-                <p className="font-bold text-gray-500">Quotation Number</p>
-                <p>{quotationData.quotationNumber || 'N/A'}</p>
             </div>
             <div>
                 <p className="font-bold text-gray-500">To</p>
@@ -78,62 +78,70 @@ export function QuotationPreview({ quotationData }: QuotationPreviewProps) {
             </div>
         </div>
         
-        <div className="py-2">
-             <p className="font-bold text-blue-500 text-xs">Vehicle Details</p>
-             <p className="font-bold">{quotationData.carModel || 'N/A'}</p>
-             <p>{quotationData.vehicleNumber || 'N/A'}</p>
+        <div className="py-2 mt-4 border-t border-red-200">
+             <p className="font-bold text-red-500 text-xs">Vehicle Details</p>
+             <div className="grid grid-cols-2 gap-4 mt-1">
+                <div>
+                    <p className="font-bold">Model</p>
+                    <p>{quotationData.carModel || 'N/A'}</p>
+                </div>
+                <div>
+                    <p className="font-bold">Car Number</p>
+                    <p>{quotationData.vehicleNumber || 'N/A'}</p>
+                </div>
+             </div>
         </div>
 
-        <main className="flex-grow">
+        <main className="flex-grow pt-4">
             <Table>
                 <TableHeader>
-                    <TableRow className="bg-blue-500 hover:bg-blue-600">
-                        <TableHead className="text-white w-[50px]">Serial No.</TableHead>
+                    <TableRow className="bg-red-500 hover:bg-red-600">
+                        <TableHead className="text-white w-[50px] text-center">Serial No.</TableHead>
                         <TableHead className="text-white w-1/2">Description</TableHead>
-                        <TableHead className="text-white">Unit Price</TableHead>
-                        <TableHead className="text-white">Quantity</TableHead>
+                        <TableHead className="text-white text-right">Unit Price</TableHead>
+                        <TableHead className="text-white text-right">Quantity</TableHead>
                         <TableHead className="text-white text-right">Total</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {quotationData.items.map((item, index) => (
-                        <TableRow key={index} className="border-b border-gray-200">
-                            <TableCell>{index + 1}</TableCell>
-                            <TableCell className="font-medium">{item.description}</TableCell>
-                            <TableCell>{item.unitPrice ? formatCurrency(item.unitPrice) : ''}</TableCell>
-                            <TableCell>{item.quantity || ''}</TableCell>
-                            <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
+                        <TableRow key={index} className="border-b-2 border-white">
+                            <TableCell className="text-center bg-gray-100">{index + 1}</TableCell>
+                            <TableCell className="font-medium bg-gray-100">{item.description}</TableCell>
+                            <TableCell className="text-right bg-gray-100">{item.unitPrice ? formatCurrency(item.unitPrice) : ''}</TableCell>
+                            <TableCell className="text-right bg-gray-100">{item.quantity || ''}</TableCell>
+                            <TableCell className="text-right font-medium bg-gray-100">{formatCurrency(item.total)}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
                 <TableFooter>
-                    <TableRow className="border-t-2 border-blue-500">
-                        <TableCell colSpan={4} className="text-right font-bold text-lg">ESTIMATED TOTAL</TableCell>
-                        <TableCell className="text-right font-bold text-lg">{formatCurrency(grandTotal)}</TableCell>
+                    <TableRow className="border-t-2 border-red-500">
+                        <TableCell colSpan={4} className="text-right font-bold text-base">GRAND TOTAL</TableCell>
+                        <TableCell className="text-right font-bold text-base">{formatCurrency(grandTotal)}</TableCell>
                     </TableRow>
                 </TableFooter>
             </Table>
         </main>
         
-        <div className="text-center py-4 text-xs">
-            <p>This is a quotation and not a final invoice. Prices are subject to change.</p>
+        <div className="text-center pt-8 pb-4">
+            <p className="text-red-500 font-semibold">Thanks for choosing us to serve your automotive needs!</p>
         </div>
 
-        <footer className="text-xs text-blue-500 border-t-2 border-blue-500 pt-2">
+        <footer className="text-xs text-red-500 border-t-2 border-red-500 pt-2">
             <div className="flex justify-between">
                 <div>
-                    <p>Tel: + 91-9966783333</p>
-                    <p>+ 91-9563998998</p>
+                    <p><span className="font-bold">Tel:</span> +91-9966783333</p>
+                    <p>+91-9563998998</p>
                 </div>
                  <div className="text-right">
-                    <p>Email: flywheelsauto.vjy@gmail.com</p>
-                    <p>Web: www.flywheelsauto.in</p>
+                    <p><span className="font-bold">Email:</span> flywheelsauto.vjy@gmail.com</p>
+                    <p><span className="font-bold">Web:</span> www.flywheelsauto.in</p>
                 </div>
             </div>
-             <div className="text-right font-code text-xs text-gray-500 mt-2">
-                a 2LYP create
-            </div>
         </footer>
+        <div className="absolute bottom-4 right-8 font-code text-xs text-gray-400">
+            A 2LYP create
+        </div>
     </div>
   );
 }
