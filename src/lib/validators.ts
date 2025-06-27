@@ -15,5 +15,14 @@ export const invoiceSchema = z.object({
   items: z.array(lineItemSchema),
 });
 
+export const quotationSchema = z.object({
+  quotationNumber: z.string(),
+  vehicleNumber: z.string().min(1, 'Vehicle number is required.'),
+  customerName: z.string().min(1, 'Customer name is required.'),
+  carModel: z.string().min(1, 'Car model is required.'),
+  items: z.array(lineItemSchema),
+});
+
 export type InvoiceSchema = z.infer<typeof invoiceSchema>;
+export type QuotationSchema = z.infer<typeof quotationSchema>;
 export type LineItemSchema = z.infer<typeof lineItemSchema>;

@@ -2,7 +2,8 @@
 
 import { handleInvoiceModifications, HandleInvoiceModificationsInput } from '@/ai/flows/handle-invoice-modifications';
 import { parseServiceDetails, ParseServiceDetailsInput, ParseServiceDetailsOutput } from '@/ai/flows/parse-service-details';
-import { invoiceSchema } from '@/lib/validators';
+import { parseQuotationDetails, ParseQuotationDetailsInput } from '@/ai/flows/parse-quotation-details';
+import { invoiceSchema, quotationSchema } from '@/lib/validators';
 import { format } from 'date-fns';
 
 const API_KEY_ERROR_MESSAGE = "AI features require a Gemini API key. Please add `GEMINI_API_KEY=your_key` to the .env file and restart the server. You can get a key from Google AI Studio.";
@@ -52,6 +53,45 @@ export async function parseInvoiceAction(input: ParseServiceDetailsInput): Promi
         return { success: false, data: null, error: `Failed to parse details: ${error.message || 'Unknown AI error'}` };
     }
 }
+
+export async function parseQuotationAction(input: ParseQuotationDetailsInput): Promise<{
+    success: boolean;
+    data: (ParseServiceDetailsOutput & { quotationNumber: string }) | null;
+    error: string | null;
+}> {
+    if (isApiKeyMissing()) {
+        console.error(API_KEY_ERROR_MESSAGE);
+        return { success: false, data: null, error: API_KEY_ERROR_MESSAGE };
+    }
+
+    try {
+        const parsedData = await parseQuotationDetails(input);
+        
+        const validatedItems = parsedData.items.map(item => ({
+            ...item,
+            quantity: Number(item.quantity) || 0,
+            unitPrice: Number(item.unitPrice) || 0,
+            total: Number(item.total) || 0,
+        }));
+        
+        const quotationNumber = `Q${format(new Date(), 'yyMMddHHmmss')}`;
+        const dataWithQuotationNumber = { ...parsedData, items: validatedItems, quotationNumber };
+
+        const validationResult = quotationSchema.safeParse(dataWithQuotationNumber);
+        if(!validationResult.success) {
+            console.warn("AI output validation failed for quotation", validationResult.error.issues);
+        }
+
+        return { success: true, data: dataWithQuotationNumber, error: null };
+    } catch (error: any) {
+        console.error('Error parsing quotation details:', error);
+        if (error.message?.includes('API key')) {
+            return { success: false, data: null, error: API_KEY_ERROR_MESSAGE };
+        }
+        return { success: false, data: null, error: `Failed to parse quotation: ${error.message || 'Unknown AI error'}` };
+    }
+}
+
 
 export async function modifyInvoiceAction(input: HandleInvoiceModificationsInput) {
     if (isApiKeyMissing()) {

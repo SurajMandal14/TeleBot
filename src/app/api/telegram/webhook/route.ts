@@ -1,7 +1,7 @@
 // src/app/api/telegram/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import TelegramBot from 'node-telegram-bot-api';
-import { modifyInvoiceAction, parseInvoiceAction } from '@/app/actions';
+import { modifyInvoiceAction, parseInvoiceAction, parseQuotationAction } from '@/app/actions';
 
 // It's recommended to set the webhook via a manual cURL command or a setup script
 // rather than in the code, especially in a serverless environment.
@@ -67,6 +67,47 @@ async function generateInvoiceReply(invoiceData: any, title: string) {
     return { responseText, replyOptions };
 }
 
+
+async function generateQuotationReply(quotationData: any, title: string) {
+    const { customerName, vehicleNumber, carModel, items, quotationNumber } = quotationData;
+
+    let responseText = `*${title}*:\n\n`;
+    responseText += `*Quotation Number:* ${quotationNumber}\n\n`;
+    responseText += `*Customer:* ${customerName}\n`;
+    responseText += `*Vehicle:* ${vehicleNumber}\n`;
+    responseText += `*Model:* ${carModel}\n\n`;
+    responseText += `*Items*:\n`;
+
+    let totalAmount = 0;
+    items.forEach((item: any) => {
+        responseText += `- ${item.description}: ${item.total}\n`;
+        totalAmount += item.total;
+    });
+
+    responseText += `\n*Estimated Total:* ${totalAmount.toFixed(2)}`;
+    
+    const replyOptions: TelegramBot.SendMessageOptions = {
+        parse_mode: 'Markdown'
+    };
+
+    if (publicUrl) {
+        const jsonData = JSON.stringify(quotationData);
+        const base64Data = Buffer.from(jsonData).toString('base64');
+        const quotationUrl = `${publicUrl}/view-quotation?data=${base64Data}`;
+
+        replyOptions.reply_markup = {
+            inline_keyboard: [
+                [{ text: '📄 View and Print PDF', url: quotationUrl }]
+            ]
+        };
+    } else {
+        responseText += `\n\n(Set the PUBLIC_URL environment variable to enable PDF link generation)`;
+    }
+
+    return { responseText, replyOptions };
+}
+
+
 export async function POST(req: NextRequest) {
     if (!bot) {
         return NextResponse.json({ error: 'Telegram bot not configured.' }, { status: 500 });
@@ -84,9 +125,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ status: 'ok' });
         }
 
+        const chatId = message.chat.id;
+        
         // Handle modification requests (replies to the bot's own invoice messages)
-        if (message.reply_to_message && message.reply_to_message.from.is_bot) {
-            const chatId = message.chat.id;
+        if (message.reply_to_message && message.reply_to_message.from.is_bot && message.reply_to_message.text.includes('*Invoice Number:*')) {
             const originalInvoiceText = message.reply_to_message.text;
             const modificationRequest = message.text;
 
@@ -116,7 +158,6 @@ export async function POST(req: NextRequest) {
 
         // Handle regular messages and commands
         if (message.text) {
-            const chatId = message.chat.id;
             const text = message.text;
 
             if (text === '/start') {
@@ -131,51 +172,70 @@ export async function POST(req: NextRequest) {
             }
             
             if (text === 'Invoice') {
-                await bot.sendMessage(chatId, 'Please send the service notes.');
+                await bot.sendMessage(chatId, 'Please send the service notes for the invoice.');
                 return NextResponse.json({ status: 'ok' });
             }
 
             if (text === 'Quotation') {
-                await bot.sendMessage(chatId, 'This feature is coming soon.');
+                await bot.sendMessage(chatId, 'Please send the service notes for the quotation.');
                 return NextResponse.json({ status: 'ok' });
             }
 
             
-            const parsingMessage = await bot.sendMessage(chatId, 'Parsing your invoice details, please wait...');
+            const parsingMessage = await bot.sendMessage(chatId, 'Parsing your text, please wait...');
+            
+            const isQuotation = text.toLowerCase().includes('quote') || text.toLowerCase().includes('quotation');
 
-            const result = await parseInvoiceAction({ text });
+            if(isQuotation) {
+                const result = await parseQuotationAction({ text });
+                 if (result.success && result.data) {
+                     const { responseText, replyOptions } = await generateQuotationReply(result.data, "Quotation Details Parsed Successfully");
+                     await bot.editMessageText(responseText, {
+                         chat_id: chatId,
+                         message_id: parsingMessage.message_id,
+                         ...replyOptions
+                     });
+                 } else {
+                      await bot.editMessageText(`Sorry, I couldn't parse that as a quotation. Error: ${result.error}`, {
+                         chat_id: chatId,
+                         message_id: parsingMessage.message_id,
+                     });
+                 }
+            } else {
+                const result = await parseInvoiceAction({ text });
 
-            if (result.success && result.data) {
-                const { customerName, vehicleNumber, carModel } = result.data;
-                
-                const missingFields = [];
-                if (!customerName?.trim()) missingFields.push('Customer Name');
-                if (!vehicleNumber?.trim()) missingFields.push('Vehicle Number');
-                if (!carModel?.trim()) missingFields.push('Car Model');
-
-                if (missingFields.length > 0) {
-                    const missingFieldsText = missingFields.map(f => `*${f}*`).join(', ');
-                    const responseText = `I've parsed what I could, but I'm missing some essential details: ${missingFieldsText}.\n\nPlease send your service notes again, including the missing information.`;
+                if (result.success && result.data) {
+                    const { customerName, vehicleNumber, carModel } = result.data;
                     
-                    await bot.editMessageText(responseText, {
-                        chat_id: chatId,
-                        message_id: parsingMessage.message_id,
-                        parse_mode: 'Markdown'
-                    });
+                    const missingFields = [];
+                    if (!customerName?.trim()) missingFields.push('Customer Name');
+                    if (!vehicleNumber?.trim()) missingFields.push('Vehicle Number');
+                    if (!carModel?.trim()) missingFields.push('Car Model');
 
+                    if (missingFields.length > 0) {
+                        const missingFieldsText = missingFields.map(f => `*${f}*`).join(', ');
+                        const responseText = `I've parsed what I could, but I'm missing some essential details: ${missingFieldsText}.\n\nPlease send your service notes again, including the missing information.`;
+                        
+                        await bot.editMessageText(responseText, {
+                            chat_id: chatId,
+                            message_id: parsingMessage.message_id,
+                            parse_mode: 'Markdown'
+                        });
+
+                    } else {
+                        const { responseText, replyOptions } = await generateInvoiceReply(result.data, "Invoice Details Parsed Successfully");
+                        await bot.editMessageText(responseText, {
+                            chat_id: chatId,
+                            message_id: parsingMessage.message_id,
+                            ...replyOptions
+                        });
+                    }
                 } else {
-                    const { responseText, replyOptions } = await generateInvoiceReply(result.data, "Invoice Details Parsed Successfully");
-                    await bot.editMessageText(responseText, {
+                    await bot.editMessageText(`Sorry, I couldn't parse that. Error: ${result.error}`, {
                         chat_id: chatId,
                         message_id: parsingMessage.message_id,
-                        ...replyOptions
                     });
                 }
-            } else {
-                await bot.editMessageText(`Sorry, I couldn't parse that. Error: ${result.error}`, {
-                    chat_id: chatId,
-                    message_id: parsingMessage.message_id,
-                });
             }
         }
 
