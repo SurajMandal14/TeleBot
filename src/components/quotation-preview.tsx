@@ -62,8 +62,8 @@ export function QuotationPreview({ quotationData }: QuotationPreviewProps) {
                     <p className="text-gray-600 font-medium mt-2">GST IN : 37AAJFF3362M1Z1</p>
                 </div>
             </div>
-            <div className="w-40 h-24 relative -mt-2">
-                 <Image src="https://i.ibb.co/fY6wrYpn/flywheels-logo.jpg" alt="Flywheels Logo" layout="fill" objectFit="contain" />
+            <div className="w-48 h-24 relative -mt-2">
+                 <Image src="https://i.ibb.co/L5R9RZM/flywheels-logo.png" alt="Flywheels Logo" layout="fill" objectFit="contain" />
             </div>
         </header>
 

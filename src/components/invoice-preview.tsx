@@ -59,8 +59,8 @@ export function InvoicePreview({ invoiceData }: InvoicePreviewProps) {
                 <p className="text-gray-600">Nagarjuna Nagar, Currency Nagar</p>
                 <p className="text-gray-600">Vijayawada, Andhra Pradesh -520008</p>
             </div>
-            <div className="w-48 h-24 relative">
-                 <Image src="https://i.ibb.co/fY6wrYpn/flywheels-logo.jpg" alt="Flywheels Logo" layout="fill" objectFit="contain" />
+            <div className="w-64 h-32 relative">
+                 <Image src="https://i.ibb.co/L5R9RZM/flywheels-logo.png" alt="Flywheels Logo" layout="fill" objectFit="contain" />
             </div>
         </header>
 

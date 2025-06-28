@@ -4,7 +4,6 @@ import { handleInvoiceModifications, HandleInvoiceModificationsInput } from '@/a
 import { parseServiceDetails, ParseServiceDetailsInput, ParseServiceDetailsOutput } from '@/ai/flows/parse-service-details';
 import { parseQuotationDetails, ParseQuotationDetailsInput } from '@/ai/flows/parse-quotation-details';
 import { invoiceSchema, quotationSchema } from '@/lib/validators';
-import { format } from 'date-fns';
 
 const API_KEY_ERROR_MESSAGE = "AI features require a Gemini API key. Please add `GEMINI_API_KEY=your_key` to the .env file and restart the server. You can get a key from Google AI Studio.";
 
@@ -35,7 +34,12 @@ export async function parseInvoiceAction(input: ParseServiceDetailsInput): Promi
             total: Number(item.total) || 0,
         }));
         
-        const invoiceNumber = format(new Date(), 'yyMMddHHmmss');
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        // Use seconds since year start + 2000 for a unique, sequential-like number for the year.
+        const secondsSinceYearStart = Math.floor((now.getTime() - startOfYear.getTime()) / 1000);
+        const invoiceNumber = (2000 + secondsSinceYearStart).toString();
+        
         const dataWithInvoiceNumber = { ...parsedData, items: validatedItems, invoiceNumber };
 
         // Validate the structure of the AI output
@@ -74,7 +78,10 @@ export async function parseQuotationAction(input: ParseQuotationDetailsInput): P
             total: Number(item.total) || 0,
         }));
         
-        const quotationNumber = `Q${format(new Date(), 'yyMMddHHmmss')}`;
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const secondsSinceYearStart = Math.floor((now.getTime() - startOfYear.getTime()) / 1000);
+        const quotationNumber = `Q${2000 + secondsSinceYearStart}`;
         const dataWithQuotationNumber = { ...parsedData, items: validatedItems, quotationNumber };
 
         const validationResult = quotationSchema.safeParse(dataWithQuotationNumber);
