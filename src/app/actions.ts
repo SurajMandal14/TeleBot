@@ -35,10 +35,9 @@ export async function parseInvoiceAction(input: ParseServiceDetailsInput): Promi
         }));
         
         const now = new Date();
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        // Use seconds since year start + 2000 for a unique, sequential-like number for the year.
-        const secondsSinceYearStart = Math.floor((now.getTime() - startOfYear.getTime()) / 1000);
-        const invoiceNumber = (2000 + secondsSinceYearStart).toString();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const secondsSinceDayStart = Math.floor((now.getTime() - startOfDay.getTime()) / 1000);
+        const invoiceNumber = (2000 + secondsSinceDayStart).toString();
         
         const dataWithInvoiceNumber = { ...parsedData, items: validatedItems, invoiceNumber };
 
@@ -79,9 +78,10 @@ export async function parseQuotationAction(input: ParseQuotationDetailsInput): P
         }));
         
         const now = new Date();
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const secondsSinceYearStart = Math.floor((now.getTime() - startOfYear.getTime()) / 1000);
-        const quotationNumber = `Q${2000 + secondsSinceYearStart}`;
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const secondsSinceDayStart = Math.floor((now.getTime() - startOfDay.getTime()) / 1000);
+        const quotationNumber = `Q${2000 + secondsSinceDayStart}`;
+
         const dataWithQuotationNumber = { ...parsedData, items: validatedItems, quotationNumber };
 
         const validationResult = quotationSchema.safeParse(dataWithQuotationNumber);
