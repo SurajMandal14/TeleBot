@@ -65,7 +65,7 @@ function ViewQuotationPage() {
     }
     
     return (
-         <main className="bg-gray-50 py-8 px-4">
+         <main className="bg-gray-50 py-8 px-4 print:bg-white">
             <div className="container mx-auto">
                 <div className="flex justify-between items-center mb-8 no-print">
                     <div className="flex items-center gap-3">
@@ -78,9 +78,9 @@ function ViewQuotationPage() {
                         <FileText className="mr-2 h-4 w-4" /> Print / Save as PDF
                     </Button>
                 </div>
-                <Card className="shadow-lg">
-                    <CardContent className="p-0">
-                        <div className="aspect-[8.5/11] bg-white rounded-md border">
+                <Card className="shadow-lg print:shadow-none print:border-none">
+                    <CardContent className="p-0 print:p-0">
+                        <div className="aspect-[8.5/11] bg-white rounded-md border print:aspect-auto print:rounded-none print:border-none">
                             <QuotationPreview quotationData={quotationData} />
                         </div>
                     </CardContent>

@@ -95,18 +95,18 @@ body {
   .no-print {
     display: none !important;
   }
-  #invoice-print-area {
-    display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    margin: 0;
-    font-size: 10px;
-  }
   main {
-    padding: 0;
+     padding: 0 !important;
+  }
+  #invoice-print-area, #quotation-print-area {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 10px;
+    box-shadow: none !important;
+    border: none !important;
   }
 }
